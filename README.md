@@ -64,13 +64,19 @@ opencv/last/
 ├── train_plate_detector.py         # YOLO 车牌检测器训练
 ├── train_ccpd.py                   # CCPD 字符提取+训练（一键）
 ├── download_ccpd.py                # CCPD 数据集下载与字符提取
+├── test_canvas_vs_emnist.py        # 画板 vs EMNIST 对比测试
+├── test_end_to_end_ocr.py          # 端到端 OCR 视频测试
+├── test_plate_detector.py          # 车牌检测器测试
+├── test_video_detector.py          # 视频检测器测试
 ├── requirements.txt                # Python 依赖清单
 ├── src/
 │   ├── utils/                      # 工具模块
 │   │   ├── helpers.py              #   设备、字符集、路径配置
 │   │   ├── model_loader.py         #   模型权重加载
 │   │   ├── ocr_engine.py           #   PaddleOCR 封装
-│   │   └── gradcam.py              #   GradCAM 可解释性
+│   │   ├── gradcam.py              #   GradCAM 可解释性
+│   │   ├── logger.py               #   日志记录工具
+│   │   └── metrics.py              #   评估指标计算
 │   ├── core/
 │   │   ├── deep_learning/          # 深度学习模块
 │   │   │   ├── resnet.py           #   ResNet18 模型定义
@@ -79,13 +85,15 @@ opencv/last/
 │   │   │   ├── trainer.py          #   通用训练管理类
 │   │   │   ├── evaluator.py        #   模型评估
 │   │   │   ├── dataset_emnist.py   #   EMNIST 数据加载
-│   │   │   └── dataset_synthetic.py#   车牌字符数据加载
+│   │   │   ├── dataset_synthetic.py#   车牌字符数据加载
+│   │   │   └── plate_dataset.py    #   车牌数据集处理
 │   │   └── traditional/            # 传统 CV 模块
 │   │       ├── plate_locator.py    #   车牌定位（HSV+形态学）
 │   │       ├── segmenter.py        #   字符投影分割
 │   │       ├── document_scanner.py #   文档扫描（Canny+轮廓）
 │   │       ├── enhancer.py         #   图像增强（CLAHE+二值化）
-│   │       └── base_processor.py   #   透视变换等基础操作
+│   │       ├── base_processor.py   #   透视变换等基础操作
+│   │       └── comparisons.py      #   传统CV方法对比
 │   └── routes/                     # Flask 路由
 │       ├── page_routes.py          #   页面路由
 │       ├── cv_routes.py            #   车牌/文档/视频 API
