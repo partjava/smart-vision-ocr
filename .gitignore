@@ -1,7 +1,6 @@
 # 数据集（太大，不上传）
 data/CCPD/
 data/emnist/
-data/plate_chars/
 data/plate_chars_backup/
 data/plate_chars_ccpd/
 data/plate_images/
@@ -52,3 +51,7 @@ weights/*/weights/last.pt
 Thumbs.db
 *.swp
 *.swo
+*.doc
+*.docx
+*.pdf
+课程设计报告.md
