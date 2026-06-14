@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>传统 CV 算子交互调参舱 - CV课程设计</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .tuner-container {
+            display: grid;
+            grid-template-columns: 1.2fr 2fr;
+            gap: 2rem;
+        }
+        @media (max-width: 1024px) {
+            .tuner-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        .slider-group {
+            margin-bottom: 1.2rem;
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 0.8rem;
+        }
+        .slider-title {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .slider-title span.val {
+            color: var(--primary);
+            font-weight: bold;
+        }
+        .slider-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary-grad);
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+        }
+        .select-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-card);
+            color: var(--text-primary);
+            padding: 0.5rem;
+            border-radius: 6px;
+            outline: none;
+        }
+        .tuner-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        @media (max-width: 768px) {
+            .tuner-preview-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .tuner-img-box {
+            background: #000;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 0.4rem;
+            text-align: center;
+        }
+        .tuner-img-box img {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+        .tuner-img-box span {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.3rem;
+            display: block;
+        }
+        .section-header {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 导航栏 -->
+    <nav>
+        <div class="logo">
+            <i class="fa-solid fa-eye"></i> Smart Vision OCR
+        </div>
+        <ul class="nav-links">
+            <li><a href="/"><i class="fa-solid fa-camera"></i> 识别大厅</a></li>
+            <li><a href="/canvas"><i class="fa-solid fa-pen-fancy"></i> 手写画板</a></li>
+            <li><a href="/tuner" class="active"><i class="fa-solid fa-sliders"></i> 传统 CV 调参舱</a></li>
+            <li><a href="/dashboard"><i class="fa-solid fa-chart-line"></i> 指标大盘</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="page-title">
+            <h1>传统 CV 算子交互调参舱</h1>
+            <p>通过实时滑块调节参数，直观分析边缘提取、图像二值化与 HSV 颜色过滤的传统 CV 算子效能差异</p>
+        </div>
+
+        <div class="tuner-container">
+            <!-- 左侧：参数控制区 -->
+            <div class="glass-card">
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-gears"></i> 算子超参数控制台</h3>
+                </div>
+
+                <!-- 图片上传 -->
+                <div class="dropzone" id="tuner-dropzone" style="min-height: 120px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <i class="fa-solid fa-image" style="font-size: 1.8rem; margin-bottom: 0.5rem;"></i>
+                    <p style="font-size: 0.85rem;">拖拽或上传待调参测试图片</p>
+                    <input type="file" id="tuner-file-input" style="display: none;" accept="image/*">
+                    <button class="btn-upload" style="margin-top: 0.5rem; padding: 0.4rem 1.2rem; font-size: 0.8rem;" onclick="document.getElementById('tuner-file-input').click()">浏览本地</button>
+                </div>
+
+                <!-- 调参滑块 -->
+                <div id="sliders-panel" style="pointer-events: none; opacity: 0.5;">
+                    <!-- 边缘检测部分 -->
+                    <h4 style="margin-bottom: 0.8rem; color: var(--primary);"><i class="fa-solid fa-signature"></i> 边缘提取 (Edge Detection)</h4>
+                    
+                    <div class="slider-group">
+                        <div class="slider-title">
+                            <span>Canny 滞后低阈值 (Low Thresh)</span>
+                            <span class="val" id="val-canny-low">75</span>
+                        </div>
+                        <input type="range" id="canny-low" min="0" max="255" value="75" oninput="updateSliders()">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-title">
+                            <span>Canny 滞后高阈值 (High Thresh)</span>
+                            <span class="val" id="val-canny-high">200</span>
+                        </div>
+                        <input type="range" id="canny-high" min="0" max="255" value="200" oninput="updateSliders()">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-title">
+                            <span>Sobel/Laplacian 卷积核大小 (Kernel Size)</span>
+                        </div>
+                        <select id="sobel-ksize" class="select-input" onchange="updateSliders()">
+                            <option value="1">1x1</option>
+                            <option value="3" selected>3x3</option>
+                            <option value="5">5x5</option>
+                            <option value="7">7x7</option>
+                        </select>
+                    </div>
+
+                    <!-- 二值化部分 -->
+                    <h4 style="margin-top: 1.5rem; margin-bottom: 0.8rem; color: var(--success);"><i class="fa-solid fa-yin-yang"></i> 图像二值化 (Binarization)</h4>
+                    
+                    <div class="slider-group">
+                        <div class="slider-title">
+                            <span>全局固定二值化阈值 (Threshold)</span>
+                            <span class="val" id="val-global-thresh">127</span>
+                        </div>
+                        <input type="range" id="global-thresh" min="0" max="255" value="127" oninput="updateSliders()">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-title">
+                            <span>自适应二值化卷积块邻域 (Block Size)</span>
+                            <span class="val" id="val-adaptive-block">15</span>
+                        </div>
+                        <input type="range" id="adaptive-block" min="3" max="99" step="2" value="15" oninput="updateSliders()">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-title">
+                            <span>自适应二值化常数偏置 (C)</span>
+                            <span class="val" id="val-adaptive-c">8</span>
+                        </div>
+                        <input type="range" id="adaptive-c" min="-20" max="30" value="8" oninput="updateSliders()">
+                    </div>
+
+                    <!-- HSV 颜色掩膜部分 -->
+                    <h4 style="margin-top: 1.5rem; margin-bottom: 0.8rem; color: var(--warning);"><i class="fa-solid fa-palette"></i> HSV 色彩过滤掩膜 (HSV Filter)</h4>
+                    
+                    <div class="slider-group">
+                        <div class="slider-title">
+                            <span>Hue (色调) 范围</span>
+                            <span class="val" id="val-hsv-h">100 - 140</span>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <input type="range" id="hsv-h-min" min="0" max="180" value="100" oninput="updateSliders()" style="flex:1;">
+                            <input type="range" id="hsv-h-max" min="0" max="180" value="140" oninput="updateSliders()" style="flex:1;">
+                        </div>
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-title">
+                            <span>Saturation (饱和度) 范围</span>
+                            <span class="val" id="val-hsv-s">70 - 255</span>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <input type="range" id="hsv-s-min" min="0" max="255" value="70" oninput="updateSliders()" style="flex:1;">
+                            <input type="range" id="hsv-s-max" min="0" max="255" value="255" oninput="updateSliders()" style="flex:1;">
+                        </div>
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-title">
+                            <span>Value (明度) 范围</span>
+                            <span class="val" id="val-hsv-v">50 - 255</span>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <input type="range" id="hsv-v-min" min="0" max="255" value="50" oninput="updateSliders()" style="flex:1;">
+                            <input type="range" id="hsv-v-max" min="0" max="255" value="255" oninput="updateSliders()" style="flex:1;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：实时对比展示区 -->
+            <div class="glass-card" style="display: flex; flex-direction: column;">
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-chart-simple"></i> 算子对比大盘</h3>
+                </div>
+
+                <div id="tuner-placeholder" class="preview-placeholder" style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 400px;">
+                    <i class="fa-solid fa-arrow-left" style="font-size: 2.5rem; color: var(--text-secondary); margin-bottom: 1rem; opacity: 0.5;"></i>
+                    <p>请先在左侧控制台上传一张测试图片（例如车辆车牌或扫描文档原图）以解锁调参面板</p>
+                </div>
+
+                <div id="tuner-results" style="display: none;">
+                    <!-- 边缘提取对比 -->
+                    <h4 class="steps-title" style="color: var(--primary);">边缘检测算子对比</h4>
+                    <div class="tuner-preview-grid">
+                        <div class="tuner-img-box">
+                            <span>Sobel (一阶偏导数)</span>
+                            <img id="img-sobel" src="" alt="Sobel">
+                        </div>
+                        <div class="tuner-img-box">
+                            <span>Laplacian (二阶微分算子)</span>
+                            <img id="img-laplacian" src="" alt="Laplacian">
+                        </div>
+                        <div class="tuner-img-box">
+                            <span>Canny (双阈值滞后边缘检测)</span>
+                            <img id="img-canny" src="" alt="Canny">
+                        </div>
+                    </div>
+
+                    <!-- 二值化算法对比 -->
+                    <h4 class="steps-title" style="color: var(--success); margin-top: 2rem;">图像二值化算法对比</h4>
+                    <div class="tuner-preview-grid">
+                        <div class="tuner-img-box">
+                            <span>Otsu (最大类间方差法自动寻优)</span>
+                            <img id="img-otsu" src="" alt="Otsu">
+                        </div>
+                        <div class="tuner-img-box">
+                            <span>Adaptive Gaussian (自适应高斯局部阈值)</span>
+                            <img id="img-adaptive" src="" alt="Adaptive">
+                        </div>
+                        <div class="tuner-img-box">
+                            <span>Global Threshold (固定阈值二值化)</span>
+                            <img id="img-global" src="" alt="Global">
+                        </div>
+                    </div>
+
+                    <!-- HSV 过滤掩膜 -->
+                    <h4 class="steps-title" style="color: var(--warning); margin-top: 2rem;">HSV 色彩空间过滤结果</h4>
+                    <div style="text-align: center; background: #000; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                        <img id="img-hsv" src="" alt="HSV Mask" style="max-height: 250px; max-width: 100%; object-fit: contain; border-radius: 4px;">
+                        <span style="font-size:0.8rem; color: var(--text-secondary); display:block; margin-top:0.3rem;">提取出的特定颜色遮罩（白色区域表示保留）</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 脚本引用 -->
+    <script>
+        const tunerDropzone = document.getElementById('tuner-dropzone');
+        const tunerFileInput = document.getElementById('tuner-file-input');
+        const slidersPanel = document.getElementById('sliders-panel');
+        const tunerPlaceholder = document.getElementById('tuner-placeholder');
+        const tunerResults = document.getElementById('tuner-results');
+
+        if (tunerDropzone) {
+            tunerDropzone.addEventListener('dragover', (e) => { e.preventDefault(); tunerDropzone.classList.add('dragover'); });
+            tunerDropzone.addEventListener('dragleave', () => { tunerDropzone.classList.remove('dragover'); });
+            tunerDropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                tunerDropzone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    uploadTunerImage(e.dataTransfer.files[0]);
+                }
+            });
+        }
+
+        if (tunerFileInput) {
+            tunerFileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    uploadTunerImage(e.target.files[0]);
+                }
+            });
+        }
+
+        function uploadTunerImage(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            tunerDropzone.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="font-size: 1.8rem; color: var(--primary);"></i><p>正在分析并上传中...</p>`;
+
+            fetch('/api/tuner/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    tunerDropzone.innerHTML = `<i class="fa-solid fa-circle-check" style="color:var(--success); font-size:1.8rem; margin-bottom: 0.2rem;"></i><p>当前调参文件: ${file.name}</p>`;
+                    // 解锁面板
+                    slidersPanel.style.pointerEvents = 'auto';
+                    slidersPanel.style.opacity = '1.0';
+                    tunerPlaceholder.style.display = 'none';
+                    tunerResults.style.display = 'block';
+                    // 运行一次获取默认渲染
+                    updateSliders();
+                } else {
+                    alert(data.error);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("图像上传缓存失败。");
+            });
+        }
+
+        // 滑块值动态改变与网络防抖 (debounce)
+        let timer = null;
+        function updateSliders() {
+            // 实时同步 UI 滑块上的数值显示
+            const cannyLow = document.getElementById('canny-low').value;
+            const cannyHigh = document.getElementById('canny-high').value;
+            const globalThresh = document.getElementById('global-thresh').value;
+            const adaptiveBlock = document.getElementById('adaptive-block').value;
+            const adaptiveC = document.getElementById('adaptive-c').value;
+            const hMin = document.getElementById('hsv-h-min').value;
+            const hMax = document.getElementById('hsv-h-max').value;
+            const sMin = document.getElementById('hsv-s-min').value;
+            const sMax = document.getElementById('hsv-s-max').value;
+            const vMin = document.getElementById('hsv-v-min').value;
+            const vMax = document.getElementById('hsv-v-max').value;
+
+            document.getElementById('val-canny-low').innerText = cannyLow;
+            document.getElementById('val-canny-high').innerText = cannyHigh;
+            document.getElementById('val-global-thresh').innerText = globalThresh;
+            document.getElementById('val-adaptive-block').innerText = adaptiveBlock;
+            document.getElementById('val-adaptive-c').innerText = adaptiveC;
+            document.getElementById('val-hsv-h').innerText = `${hMin} - ${hMax}`;
+            document.getElementById('val-hsv-s').innerText = `${sMin} - ${sMax}`;
+            document.getElementById('val-hsv-v').innerText = `${vMin} - ${vMax}`;
+
+            // 使用 50ms 网络防抖，防止拖拽滑块时请求太过频繁导致后台阻塞
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                fetchPreview();
+            }, 50);
+        }
+
+        function fetchPreview() {
+            const bodyData = {
+                canny_low: parseInt(document.getElementById('canny-low').value),
+                canny_high: parseInt(document.getElementById('canny-high').value),
+                sobel_ksize: parseInt(document.getElementById('sobel-ksize').value),
+                global_thresh: parseInt(document.getElementById('global-thresh').value),
+                adaptive_block: parseInt(document.getElementById('adaptive-block').value),
+                adaptive_c: parseInt(document.getElementById('adaptive-c').value),
+                h_min: parseInt(document.getElementById('hsv-h-min').value),
+                h_max: parseInt(document.getElementById('hsv-h-max').value),
+                s_min: parseInt(document.getElementById('hsv-s-min').value),
+                s_max: parseInt(document.getElementById('hsv-s-max').value),
+                v_min: parseInt(document.getElementById('hsv-v-min').value),
+                v_max: parseInt(document.getElementById('hsv-v-max').value)
+            };
+
+            fetch('/api/tuner/preview', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(bodyData)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    console.error(data.error);
+                    return;
+                }
+                // 更新图像 base64 内容
+                document.getElementById('img-sobel').src = "data:image/png;base64," + data.edge_comparison.sobel;
+                document.getElementById('img-laplacian').src = "data:image/png;base64," + data.edge_comparison.laplacian;
+                document.getElementById('img-canny').src = "data:image/png;base64," + data.edge_comparison.canny;
+
+                document.getElementById('img-otsu').src = "data:image/png;base64," + data.thresh_comparison.otsu;
+                document.getElementById('img-adaptive').src = "data:image/png;base64," + data.thresh_comparison.adaptive;
+                document.getElementById('img-global').src = "data:image/png;base64," + data.thresh_comparison.global;
+
+                document.getElementById('img-hsv').src = "data:image/png;base64," + data.hsv_mask;
+            })
+            .catch(err => console.error(err));
+        }
+    </script>
+</body>
+</html>

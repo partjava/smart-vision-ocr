@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手写画板与三模型比对 - Smart Vision OCR</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .prediction-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.2rem;
+        }
+        @media (max-width: 1200px) {
+            .prediction-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .pred-card.custom-cnn {
+            border-top: 4px solid var(--success);
+        }
+        .pred-card.custom-cnn .pred-char {
+            color: var(--success);
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+        }
+        .custom-cnn .prob-fill {
+            background: var(--success);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 导航栏 -->
+    <nav>
+        <div class="logo">
+            <i class="fa-solid fa-eye"></i> Smart Vision OCR
+        </div>
+        <ul class="nav-links">
+            <li><a href="/"><i class="fa-solid fa-camera"></i> 识别大厅</a></li>
+            <li><a href="/canvas" class="active"><i class="fa-solid fa-pen-fancy"></i> 手写画板</a></li>
+            <li><a href="/tuner"><i class="fa-solid fa-sliders"></i> 传统 CV 调参舱</a></li>
+            <li><a href="/dashboard"><i class="fa-solid fa-chart-line"></i> 指标大盘</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <!-- 页面标题 -->
+        <div class="page-title">
+            <h1>迁移学习模型实时测试</h1>
+            <p>基于 PyTorch 微调的 ResNet18、MobileNetV3-Small 与自定义 CustomCharCNN 在 EMNIST 上的对比</p>
+        </div>
+
+        <div class="canvas-wrapper">
+            <!-- 左侧：在线手写板 -->
+            <div class="glass-card canvas-panel">
+                <h3><i class="fa-solid fa-signature"></i> 在线手写区域</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem; margin-top: 0.5rem;">请使用鼠标或触控板在下方黑框内书写单个英文字母或阿拉伯数字</p>
+                
+                <canvas id="canvas" width="280" height="280"></canvas>
+                
+                <div class="canvas-controls">
+                    <button class="btn-action" onclick="clearCanvas()"><i class="fa-solid fa-eraser"></i> 清空画板</button>
+                    <button class="btn-upload" style="margin-top: 0;" onclick="predictDrawing()"><i class="fa-solid fa-wand-magic-sparkles"></i> 开始识别</button>
+                </div>
+            </div>
+
+            <!-- 右侧：三模型对比结果 -->
+            <div class="glass-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                <h3><i class="fa-solid fa-code-compare"></i> 三轨模型推理实时对比</h3>
+                
+                <div class="prediction-grid" style="margin-top: 1rem; flex-grow: 1;">
+                    <!-- ResNet18 预测卡片 -->
+                    <div class="pred-card resnet" id="resnet-card">
+                        <div class="stat-label">ResNet18 预测</div>
+                        <div class="pred-char" id="res-char">-</div>
+                        <div class="pred-meta" id="res-latency">推理耗时: -- ms</div>
+                        
+                        <!-- Top-5 进度条 -->
+                        <div class="prob-bar-container" id="res-top5">
+                            <!-- 动态注入 Top5 -->
+                        </div>
+                    </div>
+
+                    <!-- MobileNetV3 预测卡片 -->
+                    <div class="pred-card mobilenet" id="mobilenet-card">
+                        <div class="stat-label">MobileNetV3-Small</div>
+                        <div class="pred-char" id="mob-char">-</div>
+                        <div class="pred-meta" id="mob-latency">推理耗时: -- ms</div>
+                        
+                        <!-- Top-5 进度条 -->
+                        <div class="prob-bar-container" id="mob-top5">
+                            <!-- 动态注入 Top5 -->
+                        </div>
+                    </div>
+
+                    <!-- CustomCharCNN 预测卡片 -->
+                    <div class="pred-card custom-cnn" id="custom-cnn-card">
+                        <div class="stat-label">自定义 CustomCharCNN</div>
+                        <div class="pred-char" id="custom-char">-</div>
+                        <div class="pred-meta" id="custom-latency">推理耗时: -- ms</div>
+                        
+                        <!-- Top-5 进度条 -->
+                        <div class="prob-bar-container" id="custom-top5">
+                            <!-- 动态注入 Top5 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 模型分析结论 -->
+                <div class="result-card" style="margin-top: 1.5rem; background: rgba(255,255,255,0.01);" id="speed-conclusion-box">
+                    <div style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
+                        <i class="fa-solid fa-circle-info" style="color: var(--primary);"></i>
+                        <span id="speed-conclusion">等待画板写入并完成识别，系统将自动对比三个模型的推理延迟效能与轻量化表现...</span>
+                    </div>
+                </div>
+
+                <!-- GradCAM 可解释性热力图 -->
+                <div class="glass-card" style="margin-top: 1.5rem;" id="gradcam-section" style="display: none;">
+                    <h3><i class="fa-solid fa-fire"></i> GradCAM 模型可解释性热力图</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 1rem;">展示每个模型在识别时关注的图像区域（红色 = 高关注，蓝色 = 低关注）</p>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                        <div style="text-align: center;">
+                            <span style="font-size: 0.8rem; color: var(--primary);">ResNet18</span>
+                            <div id="gradcam-resnet" style="margin-top: 0.5rem;"><span style="color: var(--text-secondary); font-size: 0.8rem;">等待识别...</span></div>
+                        </div>
+                        <div style="text-align: center;">
+                            <span style="font-size: 0.8rem; color: var(--warning);">MobileNetV3</span>
+                            <div id="gradcam-mobilenet" style="margin-top: 0.5rem;"><span style="color: var(--text-secondary); font-size: 0.8rem;">等待识别...</span></div>
+                        </div>
+                        <div style="text-align: center;">
+                            <span style="font-size: 0.8rem; color: var(--success);">CustomCharCNN</span>
+                            <div id="gradcam-custom" style="margin-top: 0.5rem;"><span style="color: var(--text-secondary); font-size: 0.8rem;">等待识别...</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

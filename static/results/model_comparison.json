@@ -1,0 +1,72 @@
+{
+    "emnist": {
+        "resnet18": {
+            "model_name": "RESNET18",
+            "accuracy": 0.8847340425531914,
+            "precision": 0.8885766504101991,
+            "recall": 0.8847340425531915,
+            "f1_score": 0.8832381697394996,
+            "file_size_mb": 42.80414867401123,
+            "parameters_m": 11.200623,
+            "latency_ms": 0.01885300996352215,
+            "fps": 53041.92815549641
+        },
+        "mobilenet": {
+            "model_name": "MOBILENET",
+            "accuracy": 0.8695744680851064,
+            "precision": 0.8759885919594991,
+            "recall": 0.8695744680851065,
+            "f1_score": 0.8673996437153612,
+            "file_size_mb": 6.104922294616699,
+            "parameters_m": 1.566031,
+            "latency_ms": 0.0391802338718557,
+            "fps": 25523.07378436373
+        },
+        "custom_cnn": {
+            "model_name": "CUSTOM_CNN",
+            "accuracy": 0.8726595744680851,
+            "precision": 0.8793411932699668,
+            "recall": 0.8726595744680853,
+            "f1_score": 0.8703685021065376,
+            "file_size_mb": 8.987481117248535,
+            "parameters_m": 2.351535,
+            "latency_ms": 0.006734579077499137,
+            "fps": 148487.3796108645
+        }
+    },
+    "plate": {
+        "resnet18": {
+            "model_name": "RESNET18",
+            "accuracy": 0.9494491399253304,
+            "precision": 0.8954907246460511,
+            "recall": 0.8905782402572686,
+            "f1_score": 0.8926148963903356,
+            "file_size_mb": 42.83924388885498,
+            "parameters_m": 11.209857,
+            "latency_ms": 0.023941943646744804,
+            "fps": 41767.70335586192
+        },
+        "mobilenet": {
+            "model_name": "MOBILENET",
+            "accuracy": 0.9131450560021989,
+            "precision": 0.8749809813473657,
+            "recall": 0.8298589146493174,
+            "f1_score": 0.8463716898829016,
+            "file_size_mb": 6.175057411193848,
+            "parameters_m": 1.584481,
+            "latency_ms": 0.04745180313096663,
+            "fps": 21074.014769049078
+        },
+        "custom_cnn": {
+            "model_name": "CUSTOM_CNN",
+            "accuracy": 0.959275292608626,
+            "precision": 0.9304076481006962,
+            "recall": 0.9059034065705422,
+            "f1_score": 0.9166630843449725,
+            "file_size_mb": 9.00501823425293,
+            "parameters_m": 2.356161,
+            "latency_ms": 0.009095070983646146,
+            "fps": 109949.66414205021
+        }
+    }
+}

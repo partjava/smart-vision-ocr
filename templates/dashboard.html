@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验指标与大盘 - Smart Vision OCR</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .tuner-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.2rem;
+            margin-top: 1rem;
+        }
+        @media (max-width: 968px) {
+            .tuner-preview-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .chart-box img {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border-card);
+            background: #000;
+            margin-top: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 导航栏 -->
+    <nav>
+        <div class="logo">
+            <i class="fa-solid fa-eye"></i> Smart Vision OCR
+        </div>
+        <ul class="nav-links">
+            <li><a href="/"><i class="fa-solid fa-camera"></i> 识别大厅</a></li>
+            <li><a href="/canvas"><i class="fa-solid fa-pen-fancy"></i> 手写画板</a></li>
+            <li><a href="/tuner"><i class="fa-solid fa-sliders"></i> 传统 CV 调参舱</a></li>
+            <li><a href="/dashboard" class="active"><i class="fa-solid fa-chart-line"></i> 指标大盘</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <!-- 页面标题 -->
+        <div class="page-title">
+            <h1>实验数据与评估大盘</h1>
+            <p>基于 PyTorch 的多模型 (ResNet18 vs MobileNetV3 vs CustomCharCNN) 与多数据集定量评测</p>
+        </div>
+
+        {% if comparison %}
+        <!-- 选项卡选择 -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchDashboardTab('emnist')"><i class="fa-solid fa-pen-clip"></i> EMNIST 手写字符数据集</button>
+            <button class="tab-btn" onclick="switchDashboardTab('plate')"><i class="fa-solid fa-car-rear"></i> 合成车牌字符数据集</button>
+        </div>
+
+        <!-- ==================== EMNIST 数据集大盘 ==================== -->
+        <div id="emnist-tab" class="tab-content active">
+            <!-- 快速指标卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card" style="border-bottom: 3px solid var(--primary);">
+                    <div class="stat-label">EMNIST - ResNet18 准确率</div>
+                    <div class="stat-val" style="color: var(--primary);">
+                        {% if comparison.emnist and comparison.emnist.resnet18 %}
+                            {{ "%.2f"|format(comparison.emnist.resnet18.accuracy * 100) }}%
+                        {% else %}--%{% endif %}
+                    </div>
+                </div>
+                <div class="stat-card" style="border-bottom: 3px solid var(--warning);">
+                    <div class="stat-label">EMNIST - MobileNetV3 准确率</div>
+                    <div class="stat-val" style="color: var(--warning);">
+                        {% if comparison.emnist and comparison.emnist.mobilenet %}
+                            {{ "%.2f"|format(comparison.emnist.mobilenet.accuracy * 100) }}%
+                        {% else %}--%{% endif %}
+                    </div>
+                </div>
+                <div class="stat-card" style="border-bottom: 3px solid var(--success);">
+                    <div class="stat-label">EMNIST - CustomCNN 准确率</div>
+                    <div class="stat-val" style="color: var(--success);">
+                        {% if comparison.emnist and comparison.emnist.custom_cnn %}
+                            {{ "%.2f"|format(comparison.emnist.custom_cnn.accuracy * 100) }}%
+                        {% else %}--%{% endif %}
+                    </div>
+                </div>
+                <div class="stat-card" style="border-bottom: 3px solid var(--danger);">
+                    <div class="stat-label">EMNIST - 推理延迟冠军 (小)</div>
+                    <div class="stat-val" style="color: var(--danger);">
+                        {% if best_models and best_models.emnist %}{{ best_models.emnist.latency }}{% else %}--{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 定量对比表格 -->
+            <div class="glass-card">
+                <h3><i class="fa-solid fa-table"></i> EMNIST 字符识别模型定量对比表</h3>
+                <div style="overflow-x: auto; margin-top: 1rem;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>骨干网络 (EMNIST)</th>
+                                <th>准确率 (Acc)</th>
+                                <th>精确率 (Prec)</th>
+                                <th>召回率 (Rec)</th>
+                                <th>F1-Score</th>
+                                <th>模型体积 (MB)</th>
+                                <th>参数量 (M)</th>
+                                <th>单张延迟 (ms)</th>
+                                <th>推理速度 (FPS)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m_key, m_name in [('resnet18', 'ResNet18'), ('mobilenet', 'MobileNetV3-Small'), ('custom_cnn', 'CustomCharCNN')] %}
+                            <tr>
+                                <td style="font-weight: 600;">{{ m_name }}</td>
+                                {% if comparison.emnist and comparison.emnist[m_key] %}
+                                    <td>{{ "%.2f"|format(comparison.emnist[m_key].accuracy * 100) }}%</td>
+                                    <td>{{ "%.2f"|format(comparison.emnist[m_key].precision * 100) }}%</td>
+                                    <td>{{ "%.2f"|format(comparison.emnist[m_key].recall * 100) }}%</td>
+                                    <td>{{ "%.2f"|format(comparison.emnist[m_key].f1_score * 100) }}%</td>
+                                    <td>{{ "%.2f"|format(comparison.emnist[m_key].file_size_mb) }} MB</td>
+                                    <td>{{ "%.2f"|format(comparison.emnist[m_key].parameters_m) }} M</td>
+                                    <td>{{ "%.3f"|format(comparison.emnist[m_key].latency_ms) }} ms</td>
+                                    <td>{{ "%.1f"|format(comparison.emnist[m_key].fps) }} FPS</td>
+                                {% else %}
+                                    <td colspan="8" style="text-align: center; color: var(--text-secondary);">尚未评估，请运行测试集评估脚本</td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 收敛折线图 -->
+            <div class="glass-card">
+                <h3><i class="fa-solid fa-chart-area"></i> EMNIST 训练损失与准确率收敛折线</h3>
+                <div class="tuner-preview-grid">
+                    <div class="chart-box">
+                        <h4>ResNet18 EMNIST</h4>
+                        <img src="/static/results/resnet18_emnist_curves.png" alt="ResNet18 曲线未生成">
+                    </div>
+                    <div class="chart-box">
+                        <h4>MobileNetV3 EMNIST</h4>
+                        <img src="/static/results/mobilenet_emnist_curves.png" alt="MobileNetV3 曲线未生成">
+                    </div>
+                    <div class="chart-box">
+                        <h4>CustomCharCNN EMNIST</h4>
+                        <img src="/static/results/custom_cnn_emnist_curves.png" alt="CustomCharCNN 曲线未生成">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 混淆矩阵 -->
+            <div class="glass-card">
+                <h3><i class="fa-solid fa-border-all"></i> EMNIST 测试集归一化混淆矩阵热图</h3>
+                <div class="tuner-preview-grid">
+                    <div class="chart-box">
+                        <h4>ResNet18 混淆矩阵</h4>
+                        <img src="/static/results/resnet18_emnist_confusion.png" alt="ResNet18 混淆矩阵未生成">
+                    </div>
+                    <div class="chart-box">
+                        <h4>MobileNetV3 混淆矩阵</h4>
+                        <img src="/static/results/mobilenet_emnist_confusion.png" alt="MobileNetV3 混淆矩阵未生成">
+                    </div>
+                    <div class="chart-box">
+                        <h4>CustomCharCNN 混淆矩阵</h4>
+                        <img src="/static/results/custom_cnn_emnist_confusion.png" alt="CustomCharCNN 混淆矩阵未生成">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 车牌数据集大盘 ==================== -->
+        <div id="plate-tab" class="tab-content">
+            <!-- 快速指标卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card" style="border-bottom: 3px solid var(--primary);">
+                    <div class="stat-label">Plate - ResNet18 准确率</div>
+                    <div class="stat-val" style="color: var(--primary);">
+                        {% if comparison.plate and comparison.plate.resnet18 %}
+                            {{ "%.2f"|format(comparison.plate.resnet18.accuracy * 100) }}%
+                        {% else %}--%{% endif %}
+                    </div>
+                </div>
+                <div class="stat-card" style="border-bottom: 3px solid var(--warning);">
+                    <div class="stat-label">Plate - MobileNetV3 准确率</div>
+                    <div class="stat-val" style="color: var(--warning);">
+                        {% if comparison.plate and comparison.plate.mobilenet %}
+                            {{ "%.2f"|format(comparison.plate.mobilenet.accuracy * 100) }}%
+                        {% else %}--%{% endif %}
+                    </div>
+                </div>
+                <div class="stat-card" style="border-bottom: 3px solid var(--success);">
+                    <div class="stat-label">Plate - CustomCNN 准确率</div>
+                    <div class="stat-val" style="color: var(--success);">
+                        {% if comparison.plate and comparison.plate.custom_cnn %}
+                            {{ "%.2f"|format(comparison.plate.custom_cnn.accuracy * 100) }}%
+                        {% else %}--%{% endif %}
+                    </div>
+                </div>
+                <div class="stat-card" style="border-bottom: 3px solid var(--danger);">
+                    <div class="stat-label">Plate - 推理延迟冠军 (小)</div>
+                    <div class="stat-val" style="color: var(--danger);">
+                        {% if best_models and best_models.plate %}{{ best_models.plate.latency }}{% else %}--{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 定量对比表格 -->
+            <div class="glass-card">
+                <h3><i class="fa-solid fa-table"></i> 车牌字符识别模型定量对比表</h3>
+                <div style="overflow-x: auto; margin-top: 1rem;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>骨干网络 (Plate Chars)</th>
+                                <th>准确率 (Acc)</th>
+                                <th>精确率 (Prec)</th>
+                                <th>召回率 (Rec)</th>
+                                <th>F1-Score</th>
+                                <th>模型体积 (MB)</th>
+                                <th>参数量 (M)</th>
+                                <th>单张延迟 (ms)</th>
+                                <th>推理速度 (FPS)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m_key, m_name in [('resnet18', 'ResNet18'), ('mobilenet', 'MobileNetV3-Small'), ('custom_cnn', 'CustomCharCNN')] %}
+                            <tr>
+                                <td style="font-weight: 600;">{{ m_name }}</td>
+                                {% if comparison.plate and comparison.plate[m_key] %}
+                                    <td>{{ "%.2f"|format(comparison.plate[m_key].accuracy * 100) }}%</td>
+                                    <td>{{ "%.2f"|format(comparison.plate[m_key].precision * 100) }}%</td>
+                                    <td>{{ "%.2f"|format(comparison.plate[m_key].recall * 100) }}%</td>
+                                    <td>{{ "%.2f"|format(comparison.plate[m_key].f1_score * 100) }}%</td>
+                                    <td>{{ "%.2f"|format(comparison.plate[m_key].file_size_mb) }} MB</td>
+                                    <td>{{ "%.2f"|format(comparison.plate[m_key].parameters_m) }} M</td>
+                                    <td>{{ "%.3f"|format(comparison.plate[m_key].latency_ms) }} ms</td>
+                                    <td>{{ "%.1f"|format(comparison.plate[m_key].fps) }} FPS</td>
+                                {% else %}
+                                    <td colspan="8" style="text-align: center; color: var(--text-secondary);">尚未评估，请运行测试集评估脚本</td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 收敛折线图 -->
+            <div class="glass-card">
+                <h3><i class="fa-solid fa-chart-area"></i> 车牌字符训练损失与准确率收敛折线</h3>
+                <div class="tuner-preview-grid">
+                    <div class="chart-box">
+                        <h4>ResNet18 Plate</h4>
+                        <img src="/static/results/resnet18_plate_curves.png" alt="ResNet18 曲线未生成">
+                    </div>
+                    <div class="chart-box">
+                        <h4>MobileNetV3 Plate</h4>
+                        <img src="/static/results/mobilenet_plate_curves.png" alt="MobileNetV3 曲线未生成">
+                    </div>
+                    <div class="chart-box">
+                        <h4>CustomCharCNN Plate</h4>
+                        <img src="/static/results/custom_cnn_plate_curves.png" alt="CustomCharCNN 曲线未生成">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 混淆矩阵 -->
+            <div class="glass-card">
+                <h3><i class="fa-solid fa-border-all"></i> 车牌字符测试集归一化混淆矩阵热图</h3>
+                <div class="tuner-preview-grid">
+                    <div class="chart-box">
+                        <h4>ResNet18 混淆矩阵</h4>
+                        <img src="/static/results/resnet18_plate_confusion.png" alt="ResNet18 混淆矩阵未生成">
+                    </div>
+                    <div class="chart-box">
+                        <h4>MobileNetV3 混淆矩阵</h4>
+                        <img src="/static/results/mobilenet_plate_confusion.png" alt="MobileNetV3 混淆矩阵未生成">
+                    </div>
+                    <div class="chart-box">
+                        <h4>CustomCharCNN 混淆矩阵</h4>
+                        <img src="/static/results/custom_cnn_plate_confusion.png" alt="CustomCharCNN 混淆矩阵未生成">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- 缺省状态提示 -->
+        <div class="glass-card" style="text-align: center; padding: 5rem 2rem;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size: 4rem; color: var(--warning); margin-bottom: 1.5rem;"></i>
+            <h2>未检测到实验评估数据</h2>
+            <p style="color: var(--text-secondary); max-width: 500px; margin: 0.8rem auto 1.5rem auto;">
+                系统目前找不到任何评估日志数据（`model_comparison.json`）及相关图表。请运行一键训练和评估脚本来生成这些指标大盘数据。
+            </p>
+            <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; font-family: monospace; display: inline-block; text-align: left; border: 1px solid var(--border-card);">
+                1. 训练所有数据集上的所有模型：<br>
+                   D:\anaconda\anaconda3\envs\pytorch1\python.exe -m src.core.deep_learning.trainer --model all --dataset all --epochs 5<br><br>
+                2. 运行测试集性能评估脚本：<br>
+                   D:\anaconda\anaconda3\envs\pytorch1\python.exe -m src.core.deep_learning.evaluator
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function switchDashboardTab(tabName) {
+            // 切换按钮的 active 状态
+            const buttons = document.querySelectorAll('.tabs button');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            // 切换内容的显示
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            if (tabName === 'emnist') {
+                buttons[0].classList.add('active');
+                document.getElementById('emnist-tab').classList.add('active');
+            } else {
+                buttons[1].classList.add('active');
+                document.getElementById('plate-tab').classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

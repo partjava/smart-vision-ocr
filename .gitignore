@@ -1,0 +1,54 @@
+# 数据集（太大，不上传）
+data/CCPD/
+data/emnist/
+data/plate_chars/
+data/plate_chars_backup/
+data/plate_chars_ccpd/
+data/plate_images/
+data/yolo_plate/
+data/synthetic_samples/
+plate_dataset/
+example*.mp4
+
+# 废弃的模型训练版本
+weights/plate_detector/
+weights/plate_detector2/
+weights/plate_detector3/
+weights/plate_detector4/
+weights/plate_detector5/
+weights/plate_detector6/
+weights/plate_detector7/
+weights/plate_detector9/
+weights/plate_detector10/
+weights/plate_detector11/
+
+# YOLO 预训练基座（可自动下载）
+yolov8n.pt
+
+# 临时生成文件
+static/uploads/
+test_results/
+logs/
+__pycache__/
+*/__pycache__/
+*.pyc
+*.pyo
+
+# IDE 配置
+.idea/
+.vscode/
+.claude/
+
+# 一次性工具脚本
+md2docx.py
+technical_report.md
+CCPD2019.tar.xz
+
+# YOLO last.pt（只保留 best.pt）
+weights/*/weights/last.pt
+
+# 系统文件
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多功能智能文字识别系统 - CV课程设计</title>
+    <!-- 引入 FontAwesome 图标库与自定义样式 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <!-- 导航栏 -->
+    <nav>
+        <div class="logo">
+            <i class="fa-solid fa-eye"></i> Smart Vision OCR
+        </div>
+        <ul class="nav-links">
+            <li><a href="/" class="active"><i class="fa-solid fa-camera"></i> 识别大厅</a></li>
+            <li><a href="/canvas"><i class="fa-solid fa-pen-fancy"></i> 手写画板</a></li>
+            <li><a href="/tuner"><i class="fa-solid fa-sliders"></i> 传统 CV 调参舱</a></li>
+            <li><a href="/dashboard"><i class="fa-solid fa-chart-line"></i> 指标大盘</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <!-- 页面标题 -->
+        <div class="page-title">
+            <h1>多功能智能文字识别系统</h1>
+            <p>基于 OpenCV 传统算子物理定位与端到端深度学习 OCR 字符提取</p>
+        </div>
+
+        <!-- 选项卡选择 -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('plate')"><i class="fa-solid fa-car"></i> 智能车牌识别</button>
+            <button class="tab-btn" onclick="switchTab('document')"><i class="fa-solid fa-file-invoice"></i> 智能文档扫描与通用OCR</button>
+        </div>
+
+        <!-- ==================== 车牌识别选项卡 ==================== -->
+        <div id="plate-tab" class="tab-content active">
+            <!-- 静态图像车牌识别 -->
+            <div class="glass-card">
+                <h3><i class="fa-solid fa-image"></i> 图片车牌检测与定位</h3>
+                <div class="upload-wrapper" style="margin-top: 1rem;">
+                    <!-- 上传区域 -->
+                    <div class="dropzone" id="plate-dropzone">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <h3>将车辆照片拖拽至此</h3>
+                        <p>支持 JPG, PNG 格式</p>
+                        <input type="file" id="plate-file-input" style="display: none;" accept="image/*">
+                        <button class="btn-upload" onclick="document.getElementById('plate-file-input').click()">浏览文件</button>
+                    </div>
+                    
+                    <!-- 预览与结果 -->
+                    <div class="result-container">
+                        <div class="preview-box" id="plate-preview-box">
+                            <div class="preview-placeholder">等待上传车辆图片进行识别...</div>
+                        </div>
+                        <div class="result-card" id="plate-result-card" style="display: none;">
+                            <div class="result-header">
+                                <span>EasyOCR 识别结果 (端到端)</span>
+                                <span class="badge-success" id="plate-time">耗时: -- ms</span>
+                            </div>
+                            <div class="recognized-plate-box" id="plate-result-text">--</div>
+                        </div>
+
+                        <!-- 传统分割 + CNN 结果卡片 -->
+                        <div class="result-card" id="custom-plate-result-card" style="display: none; margin-top: 1rem; border: 1px solid rgba(16, 185, 129, 0.2); background: rgba(16, 185, 129, 0.03);">
+                            <div class="result-header">
+                                <span>算法识别结果 (投影分割 + CNN)</span>
+                            </div>
+
+                            <!-- 分割出的字符预览 -->
+                            <div style="margin-top: 0.5rem; margin-bottom: 0.8rem; display: flex; gap: 4px; justify-content: center; overflow-x: auto; padding: 4px;" id="custom-plate-slices">
+                                <!-- 动态插入字符切片图片 -->
+                            </div>
+
+                            <!-- 四模型预测结果（含集成学习） -->
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
+                                <div style="background: rgba(0,0,0,0.3); padding: 0.4rem; border-radius: 6px;">
+                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">ResNet18</span>
+                                    <div style="font-weight: bold; color: var(--primary); margin-top: 0.2rem; font-size: 1.1rem;" id="custom-plate-resnet">--</div>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.3); padding: 0.4rem; border-radius: 6px;">
+                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">MobileNetV3</span>
+                                    <div style="font-weight: bold; color: var(--warning); margin-top: 0.2rem; font-size: 1.1rem;" id="custom-plate-mobilenet">--</div>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.3); padding: 0.4rem; border-radius: 6px;">
+                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">自定义 CNN</span>
+                                    <div style="font-weight: bold; color: var(--success); margin-top: 0.2rem; font-size: 1.1rem;" id="custom-plate-custom">--</div>
+                                </div>
+                                <div style="background: rgba(168, 85, 247, 0.1); padding: 0.4rem; border-radius: 6px; border: 1px solid rgba(168, 85, 247, 0.3);">
+                                    <span style="font-size: 0.75rem; color: #c084fc;"><i class="fa-solid fa-people-group"></i> 集成学习融合</span>
+                                    <div style="font-weight: bold; color: #c084fc; margin-top: 0.2rem; font-size: 1.1rem;" id="custom-plate-ensemble">--</div>
+                                </div>
+                            </div>
+
+                            <!-- 三模型逐字符对比表 -->
+                            <div id="plate-comparison-table" style="display: none; margin-top: 1rem;">
+                                <h4 style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;"><i class="fa-solid fa-table"></i> 逐字符识别对比</h4>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                        <thead id="plate-comparison-thead"></thead>
+                                        <tbody id="plate-comparison-tbody"></tbody>
+                                    </table>
+                                </div>
+                                <div id="plate-consensus" style="margin-top: 0.6rem; font-size: 0.85rem;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分步过程（折叠区） -->
+                <div id="plate-steps-section" style="display: none;">
+                    <h4 class="steps-title">OpenCV 传统定位与变换流水线</h4>
+                    <div class="steps-grid">
+                        <div class="step-box">
+                            <span>1. 标准化缩放</span>
+                            <img id="plate-step-resized" src="" alt="缩放">
+                        </div>
+                        <div class="step-box">
+                            <span>2. HSV颜色掩膜</span>
+                            <img id="plate-step-mask" src="" alt="掩膜">
+                        </div>
+                        <div class="step-box">
+                            <span>3. 形态学闭运算</span>
+                            <img id="plate-step-closed" src="" alt="闭运算">
+                        </div>
+                        <div class="step-box">
+                            <span>4. 框选轮廓</span>
+                            <img id="plate-step-detected" src="" alt="定位">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 视频流实时检测 -->
+            <div class="glass-card">
+                <h3><i class="fa-solid fa-video"></i> 视频车牌实时检测与通行日志</h3>
+                <div class="upload-wrapper" style="margin-top: 1rem; margin-bottom: 1rem;">
+                    <!-- 上传视频 -->
+                    <div class="dropzone" id="video-dropzone" style="min-height: 120px; padding: 1.5rem;">
+                        <i class="fa-solid fa-film" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                        <p>拖拽或上传车流监控视频文件 (MP4)</p>
+                        <input type="file" id="video-file-input" style="display: none;" accept="video/*">
+                        <button class="btn-upload" style="margin-top: 0.5rem; padding: 0.5rem 1.2rem; font-size: 0.85rem;" onclick="document.getElementById('video-file-input').click()">选择视频</button>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: flex-end;">
+                        <button class="btn-action" id="btn-start-video" style="display: none;" onclick="startVideoProcessing()"><i class="fa-solid fa-play"></i> 开始分析视频</button>
+                    </div>
+                </div>
+
+                <div class="video-grid" id="video-showcase" style="display: none;">
+                    <!-- 实时画面 -->
+                    <div>
+                        <div class="video-player-box" style="position: relative;">
+                            <img id="video-stream-img" src="" alt="视频帧流未启动">
+                            <div id="pause-overlay" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:10;">
+                                <i class="fa-solid fa-pause" style="font-size:3rem; color:#fff;"></i>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; margin-top:0.5rem; justify-content:center;">
+                            <button class="btn-action" id="btn-pause-video" onclick="togglePauseVideo()" style="display:none;">
+                                <i class="fa-solid fa-pause" id="pause-icon"></i> <span id="pause-text">暂停</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- 日志面板 -->
+                    <div class="logs-box">
+                        <div class="logs-title">
+                            <span><i class="fa-solid fa-clipboard-list"></i> 通行检测日志</span>
+                            <span class="badge-info" id="log-count">0 条记录</span>
+                        </div>
+                        <div class="logs-list" id="logs-container">
+                            <!-- JS 动态注入通行信息 -->
+                            <div class="preview-placeholder" style="padding-top: 5rem; text-align: center; color: var(--text-secondary);">暂无车辆通行数据</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 文档扫描与通用 OCR 选项卡 ==================== -->
+        <div id="document-tab" class="tab-content">
+            <div class="glass-card">
+                <h3><i class="fa-solid fa-file-lines"></i> 文档扫描去阴影与文本提取</h3>
+                <div class="upload-wrapper" style="margin-top: 1rem;">
+                    <!-- 上传区域 -->
+                    <div class="dropzone" id="doc-dropzone">
+                        <i class="fa-cloud-arrow-up fa-solid"></i>
+                        <h3>将文档/书籍/手写照片拖拽至此</h3>
+                        <p>支持印有字迹、手写字的 JPG, PNG 图像</p>
+                        <input type="file" id="doc-file-input" style="display: none;" accept="image/*">
+                        <button class="btn-upload" onclick="document.getElementById('doc-file-input').click()">浏览文件</button>
+                    </div>
+                    
+                    <!-- 预览与 OCR 结果 -->
+                    <div class="result-container">
+                        <div class="preview-box" id="doc-preview-box">
+                            <div class="preview-placeholder">等待上传文档图像进行扫描...</div>
+                        </div>
+                        
+                        <div class="result-card" id="doc-result-card" style="display: none;">
+                            <div class="result-header">
+                                <span>识别文本内容</span>
+                                <button class="btn-copy" onclick="copyText('doc-result-text')"><i class="fa-regular fa-copy"></i> 复制文本</button>
+                            </div>
+                            <div class="recognized-text-box" id="doc-result-text">--</div>
+                            <div style="text-align: right;">
+                                <span class="badge-success" id="doc-time">OCR 耗时: -- ms</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分步折叠区 -->
+                <div id="doc-steps-section" style="display: none;">
+                    <h4 class="steps-title">OpenCV 传统图像增强与拉直流水线</h4>
+                    <div class="steps-grid">
+                        <div class="step-box">
+                            <span>1. 边缘检测(Canny)</span>
+                            <img id="doc-step-canny" src="" alt="Canny">
+                        </div>
+                        <div class="step-box">
+                            <span>2. 轮廓拟合定位</span>
+                            <img id="doc-step-contours" src="" alt="Contours">
+                        </div>
+                        <div class="step-box">
+                            <span>3. 透视变换拉直</span>
+                            <img id="doc-step-warped" src="" alt="Warped">
+                        </div>
+                        <div class="step-box">
+                            <span>4. 自适应二值化增强</span>
+                            <img id="doc-step-enhanced" src="" alt="Enhanced">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 脚本引用 -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
